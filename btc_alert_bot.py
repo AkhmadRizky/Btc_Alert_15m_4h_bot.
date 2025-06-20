@@ -7,7 +7,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 
 # === CONFIG ===
-BOT_TOKEN = "7587053152:AAHbdo0qc-iMHdq66_8Zwm7IFAbkFHU-8ouU"
+BOT_TOKEN = "7966133298:AAHzzZtr_z7qn9OHOovdS4JXUGgFZUPtKEo"
 CHAT = "5154881695"
 PAIR = "BTCUSDT"
 
