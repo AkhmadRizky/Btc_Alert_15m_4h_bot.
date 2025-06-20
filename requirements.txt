@@ -5,3 +5,4 @@ six==1.16.0
 requests
 Flask
 Pillow
+matplotlib
