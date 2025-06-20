@@ -7,7 +7,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 
 # === CONFIG ===
-BOT_TOKEN = "7966133928:AAHzzztZ_r7qnS0HOovdS4JXUGgFZUPtKEo"
+BOT_TOKEN = "7966133298:AAHzzZtr_z7qn9OHOovdS4JXUGgFZUPtKEo"
 CHAT = "5154881695"
 PAIR = "BTCUSDT"
 LEVEL_LOW = 102500
@@ -44,7 +44,7 @@ async def check_price():
                 img = generate_chart_image(PAIR, price)
 
                 await TG_BOT.send_message(chat_id=CHAT, text=sinyal, parse_mode="HTML")
-                TG_BOT.send_photo(chat_id=CHAT, photo=img)  # tanpa await
+                TG_BOT.send_photo(chat_id=CHAT, photo=img)  # <- tanpa 'await'
 
         except TelegramError as te:
             print(f"Telegram Error: {te}")
