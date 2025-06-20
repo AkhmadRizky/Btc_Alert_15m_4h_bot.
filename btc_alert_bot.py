@@ -1,4 +1,3 @@
-import os
 import asyncio
 from telegram import Bot
 from telegram.constants import ParseMode
@@ -7,17 +6,17 @@ from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from binance.client import Client
 
-# ENV
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT = os.getenv("CHAT_ID")
-PAIR = os.getenv("PAIR", "BTCUSDT")
-LEVEL_LOW = float(os.getenv("ALERT_LEVEL_LOW", "102500"))
-LEVEL_HIGH = float(os.getenv("ALERT_LEVEL_HIGH", "104200"))
+# ⛓️ Konfigurasi Langsung
+BOT_TOKEN = "7587053152:AAHbdoQc-iMHdq66_8Zwm7IFAbkFHU-8ouU"
+CHAT = "5154881695"
+PAIR = "BTCUSDT"
+LEVEL_LOW = 102500
+LEVEL_HIGH = 104200
 
 TG_BOT = Bot(token=BOT_TOKEN)
 BINANCE = Client()
 
-# 🔔 Buat gambar alert level
+# 🖼️ Buat gambar alert level
 def generate_chart_image(pair, price):
     img = Image.new('RGB', (600, 200), color=(30, 30, 30))
     d = ImageDraw.Draw(img)
@@ -32,7 +31,7 @@ def generate_chart_image(pair, price):
     output.seek(0)
     return output
 
-# 🔁 Main loop
+# 🔁 Cek harga & kirim alert
 async def check_price():
     while True:
         try:
