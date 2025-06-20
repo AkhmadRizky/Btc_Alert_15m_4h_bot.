@@ -1,47 +1,59 @@
-
-import os, time, requests
-from binance.client import Client
+import os
+import asyncio
 from telegram import Bot
-from PIL import Image
+from telegram.constants import ParseMode
+from telegram.error import TelegramError
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+from binance.client import Client
 
-BIN_API = Client(os.getenv("BINANCE_APIKEY"), os.getenv("BINANCE_SECRET"))
-TG_BOT = Bot(token=os.getenv("BOT_TOKEN"))
+# ENV
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT = os.getenv("CHAT_ID")
 PAIR = os.getenv("PAIR", "BTCUSDT")
-LOW = float(os.getenv("ALERT_LEVEL_LOW", "102500"))
-HIGH = float(os.getenv("ALERT_LEVEL_HIGH", "104200"))
+LEVEL_LOW = float(os.getenv("ALERT_LEVEL_LOW", "102500"))
+LEVEL_HIGH = float(os.getenv("ALERT_LEVEL_HIGH", "104200"))
 
-def fetch_klines(interval="15m", limit=50):
-    data = BIN_API.get_klines(symbol=PAIR, interval=interval, limit=limit)
-    return [{"open":float(d[1]),"close":float(d[4])} for d in data]
+TG_BOT = Bot(token=BOT_TOKEN)
+BINANCE = Client()
 
-def check_signal():
-    klines = fetch_klines()
-    last = klines[-1]
-    prev = klines[-2]
-    sig = None
-    if last["close"] > HIGH: sig = "🚀 BREAKOUT 15m"
-    elif last["close"] < LOW: sig = "📉 BREAKDOWN 15m"
-    elif last["open"] < last["close"] and prev["open"] > prev["close"]:
-        sig = "🟢 Bullish Reversal 15m"
-    elif last["open"] > last["close"] and prev["open"] < prev["close"]:
-        sig = "🔴 Bearish Reversal 15m"
-    return sig
+# 🔔 Buat gambar alert level
+def generate_chart_image(pair, price):
+    img = Image.new('RGB', (600, 200), color=(30, 30, 30))
+    d = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
 
-def screenshot():
-    url = f"https://chart-img.com/chart?symbol={PAIR}&interval=15m&theme=dark"
-    resp = requests.get(url)
-    return resp.content
+    d.text((10, 10), f"ALERT PAIR: {pair}", font=font, fill=(255, 255, 0))
+    d.text((10, 50), f"CURRENT PRICE: {price}", font=font, fill=(0, 255, 0))
+    d.text((10, 100), f"LEVEL RANGE: {LEVEL_LOW} - {LEVEL_HIGH}", font=font, fill=(255, 255, 255))
 
-def send_alert(sig):
-    img = screenshot()
-    TG_BOT.send_message(CHAT, f"{sig} pada {PAIR}", parse_mode="HTML")
-    TG_BOT.send_photo(CHAT, photo=BytesIO(img))
+    output = BytesIO()
+    img.save(output, format='PNG')
+    output.seek(0)
+    return output
 
-if __name__ == "__main__":
+# 🔁 Main loop
+async def check_price():
     while True:
-        sig = check_signal()
-        if sig:
-            send_alert(sig)
-        time.sleep(60)
+        try:
+            ticker = BINANCE.get_symbol_ticker(symbol=PAIR)
+            price = float(ticker['price'])
+            print(f"📊 {PAIR} price: {price}")
+
+            if price <= LEVEL_LOW or price >= LEVEL_HIGH:
+                msg = f"🚨 Sinyal BTC Alert 🚨\n\nPAIR: <b>{PAIR}</b>\nPRICE: <code>{price}</code>"
+                img = generate_chart_image(PAIR, price)
+
+                await TG_BOT.send_message(chat_id=CHAT, text=msg, parse_mode=ParseMode.HTML)
+                await TG_BOT.send_photo(chat_id=CHAT, photo=img)
+
+        except TelegramError as e:
+            print(f"❌ Telegram Error: {e}")
+        except Exception as ex:
+            print(f"⚠️ Other Error: {ex}")
+
+        await asyncio.sleep(60)  # delay 1 menit
+
+# ▶️ Start bot
+if __name__ == "__main__":
+    asyncio.run(check_price())
