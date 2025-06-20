@@ -1,4 +1,3 @@
-
 import os
 import asyncio
 from telegram import Bot
@@ -6,12 +5,11 @@ from telegram.error import TelegramError
 from binance.client import Client
 from io import BytesIO
 import matplotlib.pyplot as plt
-from datetime import datetime
 
-# === CONFIG ===
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-PAIR = os.getenv("PAIR", "BTCUSDT")
+# === CONFIG (sudah diisi token & chat ID milikmu) ===
+BOT_TOKEN = "7966133298:AAHzzZtr_z7qn9OHOovdS4JXUGgFZUPtKEo"
+CHAT_ID = "5154881695"
+PAIR = "BTCUSDT"
 
 # === INIT ===
 TG_BOT = Bot(token=BOT_TOKEN)
@@ -36,24 +34,18 @@ async def check_price():
         try:
             ticker = BINANCE.get_symbol_ticker(symbol=PAIR)
             price = float(ticker['price'])
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-            pesan = (
-                f"📊 <b>Update Harga {PAIR}</b>\n"
-                f"Harga Sekarang: <b>{price}</b>\n"
-                f"Waktu: {timestamp}"
-            )
+            sinyal = f"⚠️ Update harga *{PAIR}* setiap 5 menit:\n💰 *{price}* USDT"
             img = generate_chart_image(PAIR, price)
 
-            await TG_BOT.send_message(chat_id=CHAT_ID, text=pesan, parse_mode='HTML')
+            await TG_BOT.send_message(chat_id=CHAT_ID, text=sinyal, parse_mode="Markdown")
             await TG_BOT.send_photo(chat_id=CHAT_ID, photo=img)
 
         except TelegramError as te:
-            print(f"[Telegram Error]: {te}")
+            print(f"Telegram Error: {te}")
         except Exception as e:
-            print(f"[Error]: {e}")
+            print(f"Error: {e}")
 
-        await asyncio.sleep(300)  # 15 menit
+        await asyncio.sleep(300)  # 5 menit
 
 # === RUN ===
 if __name__ == "__main__":
