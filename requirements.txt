@@ -1,0 +1,6 @@
+
+python-binance
+python-telegram-bot
+requests
+Flask
+Pillow
