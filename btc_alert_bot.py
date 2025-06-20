@@ -1,5 +1,6 @@
 import os
 import asyncio
+import requests
 from telegram import Bot
 from telegram.error import TelegramError
 from binance.client import Client
@@ -7,7 +8,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 
 # === CONFIG ===
-BOT_TOKEN = "7587053152:AAHbdoQc-iMHdq66_8Zwm7IFAbkFHU-8ouU"
+BOT_TOKEN = "7578053152:AAHbdoQc-iMHdq6_8Zwm7lFAbkFHU-8ouU"
 CHAT = "5154881695"
 PAIR = "BTCUSDT"
 LEVEL_LOW = 102500
@@ -24,7 +25,6 @@ def generate_chart_image(pair, price):
     ax.set_title(f"{pair} Price Alert")
     ax.set_ylabel("Price")
     ax.set_xlabel("Time")
-    ax.grid(True)
 
     buffer = BytesIO()
     plt.savefig(buffer, format='png')
@@ -34,17 +34,31 @@ def generate_chart_image(pair, price):
 
 # === MONITOR & ALERT ===
 async def check_price():
+    # Tes koneksi awal
+    try:
+        requests.get(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            params={"chat_id": CHAT, "text": "🤖 Bot sudah aktif, siap kirim alert Bos!"}
+        )
+    except Exception as e:
+        print("Gagal kirim pesan awal:", e)
+
     while True:
         try:
             ticker = BINANCE.get_symbol_ticker(symbol=PAIR)
             price = float(ticker['price'])
-            print(f"📊 {PAIR} price: {price}")
+            print(f"📉 {PAIR} price: {price}")
 
             if price <= LEVEL_LOW or price >= LEVEL_HIGH:
                 sinyal = "🚨 Harga tembus batas!"
                 img = generate_chart_image(PAIR, price)
 
-                await TG_BOT.send_message(chat_id=CHAT, text=f"{sinyal} pada {PAIR}", parse_mode="HTML")
+                # Kirim teks manual via API
+                requests.get(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    params={"chat_id": CHAT, "text": f"{sinyal} pada {PAIR}"}
+                )
+
                 await TG_BOT.send_photo(chat_id=CHAT, photo=img)
 
         except TelegramError as te:
