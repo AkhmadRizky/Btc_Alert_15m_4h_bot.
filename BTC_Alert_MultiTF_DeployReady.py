@@ -1,56 +1,68 @@
-
 import time
 import requests
 import matplotlib.pyplot as plt
-from io import BytesIO
-import telegram
+import numpy as np
 from datetime import datetime
-import threading
+from io import BytesIO
+from PIL import Image
+import telegram
 
-bot = telegram.Bot(token="7966133298:AAHzzZtr_z7qn9OHOovdS4JXUGgFZUPtKEo")
 PAIR = "BTCUSDT"
-CHAT_ID = 5154881695
+INTERVALS = ["5m", "15m", "4h"]
 
-def fetch_price(symbol):
-    url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
-    return float(requests.get(url).json()["price"])
+# Sudah diisi token & chat_id Bos!
+TELEGRAM_TOKEN = "7587053152:AAHbdoQc-iMHdq66_XXXXXXXXXXXXXXX"
+CHAT_ID = "5154881695"
 
-def generate_chart(prices, interval):
-    plt.figure(figsize=(6, 3))
-    plt.plot(prices, marker='o')
-    plt.title(f'{PAIR} - {interval} Update')
-    plt.xlabel('Update')
-    plt.ylabel('Price')
-    plt.grid(True)
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    return buf
+bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
-def send_alert(interval, price):
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    message = f"📊 *BTCUSDT {interval} UPDATE*
+def get_klines(interval, limit=20):
+    url = f"https://api.binance.com/api/v3/klines?symbol={PAIR}&interval={interval}&limit={limit}"
+    data = requests.get(url).json()
+    return [(float(d[1]), float(d[2]), float(d[3]), float(d[4]), int(d[0])) for d in data]
 
-💰 Price: *{price:.2f}* USD
-🕒 Time: {timestamp}"
-    bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="Markdown")
+def plot_candles(data, interval):
+    fig, ax = plt.subplots()
+    for i, (o, h, l, c, ts) in enumerate(data):
+        color = 'green' if c >= o else 'red'
+        ax.plot([i, i], [l, h], color='black')
+        ax.plot([i, i], [o, c], color=color, linewidth=5)
+    ax.set_title(f"{PAIR} {interval} Candlestick")
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    plt.close(fig)
+    buffer.seek(0)
+    return buffer
 
-def monitor(interval, sleep_sec):
-    prices = []
+def analyze_trend(data):
+    close_prices = [c for _, _, _, c, _ in data]
+    ma_short = np.mean(close_prices[-3:])
+    ma_long = np.mean(close_prices)
+    return "📈 Uptrend" if ma_short > ma_long else "📉 Downtrend"
+
+def send_alert(interval):
+    data = get_klines(interval)
+    image = plot_candles(data, interval)
+    trend = analyze_trend(data)
+    price = data[-1][3]
+    time_now = datetime.utcnow().strftime('%H:%M:%S UTC')
+    
+    message = f"📊 BTCUSDT ({interval}) UPDATE*\n\n" \
+              f"💰 Price: ${price}\n" \
+              f"📉 Trend: {trend}\n" \
+              f"⏰ Time: {time_now}"
+
+    bot.send_photo(chat_id=CHAT_ID, photo=image, caption=message)
+
+if __name__ == "__main__":
     while True:
-        try:
-            price = fetch_price(PAIR)
-            prices.append(price)
-            if len(prices) > 12:
-                prices.pop(0)
-            chart = generate_chart(prices, interval)
-            send_alert(interval, price)
-            bot.send_photo(chat_id=CHAT_ID, photo=chart)
-            time.sleep(sleep_sec)
-        except Exception as e:
-            bot.send_message(chat_id=CHAT_ID, text=f"⚠️ Error ({interval}): {str(e)}")
-            time.sleep(10)
-
-threading.Thread(target=monitor, args=("5M", 300)).start()
-threading.Thread(target=monitor, args=("15M", 900)).start()
-threading.Thread(target=monitor, args=("4H", 14400)).start()
+        for tf in INTERVALS:
+            try:
+                send_alert(tf)
+                time.sleep(5)
+            except Exception as e:
+                print(f"Error on {tf}: {e}")
+        time.sleep(300)  # update setiap 5 menit
