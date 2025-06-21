@@ -11,7 +11,7 @@ PAIR = "BTCUSDT"
 INTERVALS = ["5m", "15m", "4h"]
 
 # Sudah diisi token & chat_id Bos!
-bot = telegram.Bot(token="7587053152:AAHbdoQc-iMHdq65_8zvm7TFAkbFHU-8ouU")
+bot = telegram.Bot(token="7966133298:AAHzzZtr_z7qn9OHOovdS4JXUGgFZUPtKEo)
 CHAT_ID = "5154881695"
 
 def get_klines(interval, limit=20):
